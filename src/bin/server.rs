@@ -1,15 +1,19 @@
 use bytes::BytesMut;
-use f3rg_redis::{helper::buffer_to_array, Command, Db};
+use f3rg_redis::{helper::buffer_to_array, Command, Db,};
+use f3rg_redis::server;
+use f3rg_redis::Listener
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
     signal,
+    net::TcpListener,
+    sync::{broadcast, mpsc}
 };
 
 #[tokio::main]
 pub async fn main() -> Result<(), std::io::Error> {
-    let shutdown = signal::ctrl_c();
     let listener = TcpListener::bind("127.0.0.1:8081").await?;
+    let shutdown = signal::ctrl_c();
+    let (notify_shutdown, _) = broadcast::channel(1);
+    let (shutdown_complete_tx, shutdown_complete_rx) = mpsc::channel(1);
     let mut db = Db::new();
     loop {
         let (mut socket, _) = listener.accept().await?;
